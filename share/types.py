@@ -80,9 +80,13 @@ class UnusedIDConfig:
 
 @dataclass(slots=True)
 class DBConfig:
+    vector: DBConfigVector = None
     event: DBConfigEvent = None
     file: DBConfigFile = None
 
+@dataclass(slots=True)
+class DBConfigVector:
+    dir: str = ""
 
 @dataclass(slots=True)
 class DBConfigEvent:

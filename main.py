@@ -18,7 +18,7 @@ from cachetools import TTLCache
 
 var.RAG_SYSTEM = RAGSystem(
     openai_api_key=var.CONFIG.openai.api_key,
-    db_dir=var.CONFIG.openai.db_dir,
+    db_dir=var.CONFIG.db.vector.dir,
 )
 var.RAG_SYSTEM.init_vector_store()
 var.EVENT_MANAGER = EventManager(var.CONFIG.db.event.path)
