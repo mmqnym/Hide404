@@ -69,7 +69,7 @@ async def serve() -> None:
     APP_LOG.info("***** Welcome to use Hide404 API *****")
     APP_LOG.info(f"***** Version: {app.version} *****")
     APP_LOG.info(f"***** License: {app.license_info["name"]} *****")
-    APP_LOG.info(f"***** Repository: https://github.com/mmqnym/hide404 *****")
+    APP_LOG.info(f"***** Repository: https://github.com/mmqnym/Hide404 *****")
     APP_LOG.info("Starting server...")
 
     uvicorn_config = UvicornConfig(
