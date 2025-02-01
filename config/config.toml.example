@@ -1,0 +1,16 @@
+[openai]
+base_url = "https://openrouter.ai/api/v1"
+api_key = ""
+
+[server]
+host = "0.0.0.0"
+port = 9999 # recommended 8000-65535
+workers = -1 # -1 will use the number of CPU cores
+
+[middleware.cors]
+allow_origins = "*"
+allow_credentials = true
+allow_methods = ["GET", "POST"]
+allow_headers = ["*"]
+expose_headers = ["*"]
+max_age = 600

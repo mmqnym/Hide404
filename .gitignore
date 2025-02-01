@@ -1,0 +1,10 @@
+venv
+config.toml
+vector_db
+_db
+
+logs
+upload
+__pycache__
+
+____*.py
