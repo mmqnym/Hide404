@@ -1,16 +1,63 @@
+[general]
+# timezone: in hours, can be within -12 to 14
+timezone = 8
+
 [openai]
-base_url = "https://openrouter.ai/api/v1"
+# base_url: OpenAI base url or any 3rd party API that uses OpenAI standard(ex: OpenRouter)
+# api_key: OpenAI API key or any 3rd party API that uses OpenAI standard(ex: OpenRouter)
+base_url = "https://api.openai.com/v1/chat/completions"
 api_key = ""
 
 [server]
+# host: server host
+# port: server port(recommended 8000-65535)
+# workers: number of workers(-1 will use the default value(number of CPU cores))
 host = "0.0.0.0"
-port = 9999 # recommended 8000-65535
-workers = -1 # -1 will use the number of CPU cores
+port = 32888
+workers = 1
+
+[upload]
+# dir: upload distination directory
+# allowed: allowed file extensions
+# max_size: how many files can be uploaded per request
+dir = "./upload"
+allowed = [".txt", ".md", ".json", ".csv"]
+max_size = 20
 
 [middleware.cors]
+# allow_origins: allow origins
+# allow_credentials: allow cross-site requests with credentials
+# allow_methods: allow http methods
+# allow_headers: the headers can be sent to the server
+# expose_headers: the headers can be accessed by client
+# max_age: max age in seconds
 allow_origins = "*"
-allow_credentials = true
+allow_credentials = false
 allow_methods = ["GET", "POST"]
 allow_headers = ["*"]
 expose_headers = ["*"]
 max_age = 600
+
+[db.vector]
+# dir: vector db distination directory
+dir = "./vector_db"
+
+[db.file]
+# path: file db path
+path = "./db_manager/_db/_file.db"
+
+[db.event]
+# path: event db path
+path = "./db_manager/_db/_event.db"
+
+[cache.general]
+# maxsize: maxsize of key-value pairs
+# ttl: ttl of the cache in seconds
+maxsize = 200
+ttl = 600
+
+[cache.unused_id]
+# maxsize: maxsize of key-value pairs
+# ttl: ttl of the cache in seconds
+maxsize = 100
+ttl = 300
