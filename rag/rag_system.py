@@ -60,6 +60,17 @@ class RAGSystem:
         )
 
     def init_vector_store(self) -> None:
+        """
+        Initialize the vector store from the database.
+
+        This method loads all existing collections from the database and stores them in the vector_stores attribute.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         existing_collections = self.chroma_client.list_collections()
 
         if not existing_collections:
@@ -83,6 +94,26 @@ class RAGSystem:
         collection_metadata: dict = None,
         documents_dir=os.path.join("upload", "default"),
     ) -> Tuple[dict | None, str]:
+        """
+        Create a new collection or overwrite an existing one.
+
+        This function loads documents from the specified directory, creates a new
+        vector store collection, and adds it to the internal vector stores dictionary.
+        If a collection with the specified name already exists, it will be deleted
+        and overwritten with the new collection.
+
+        Args:
+            collection_name (str): The name of the collection to create or overwrite.
+            collection_metadata (dict, optional): Metadata for the collection.
+                Defaults to None.
+            documents_dir (str, optional): The directory containing documents to load.
+                Defaults to "upload/default".
+
+        Returns:
+            Tuple[dict | None, str]: A tuple containing the collection information
+            if successful, or None if an error occurred, and a status message
+            indicating the result of the operation.
+        """
 
         is_overwrite = False
 
@@ -123,12 +154,25 @@ class RAGSystem:
     def load_documents(
         self, documents_dir: str = os.path.join("upload", "default")
     ) -> List:
-        """載入並分割文件"""
+        """
+        Load documents from a specified directory and split them into chunks.
+
+        This function iterates through all supported file extensions, loads
+        documents from the specified directory using the appropriate loader
+        class, and splits the documents into chunks using the configured
+        text splitter.
+
+        Args:
+            documents_dir (str, optional): The directory containing documents to
+                load. Defaults to "upload/default".
+
+        Returns:
+            List: A list of chunked documents, or an empty list if no documents
+                were loaded. If an error occurs, an exception is raised.
+        """
         all_documents = []
 
         try:
-            # 遍歷所有支援的文件類型
-
             for file_extension, loader_class in self.supported_loaders.items():
                 try:
                     loader = DirectoryLoader(
@@ -150,7 +194,6 @@ class RAGSystem:
                 APP_LOG.warning("No documents were loaded")
                 return []
 
-            # 統一使用 RecursiveCharacterTextSplitter 進行分割
             split_documents = self.text_splitter.split_documents(all_documents)
             APP_LOG.info(f"Split into {len(split_documents)} chunks")
 
@@ -161,7 +204,30 @@ class RAGSystem:
             raise
 
     def get_collection_info(self, collection_name: str) -> dict:
-        """獲取集合的詳細信息"""
+        """
+        Get the collection information for a given collection name.
+
+        Args:
+            collection_name (str): The name of the collection to get information for.
+
+        Returns:
+            dict: A dictionary containing the collection information. The dictionary
+            contains the following keys:
+
+            - `status` (str): The status of the collection. Can be "active", "not_found",
+                or "error".
+            - `name` (str): The name of the collection.
+            - `metadata` (dict): The metadata associated with the collection.
+            - `chunk_count` (int): The number of chunks in the collection.
+            - `persist_directory` (str): The directory where the collection is stored.
+
+            on error, returns a dictionary with the following keys:
+
+            - `status` (str): The status of the collection. Can be "error".
+            - `name` (str): The name of the collection.
+            - `error` (str): The error message.
+        """
+
         try:
             if collection_name not in self.vector_stores:
                 return {
@@ -183,7 +249,7 @@ class RAGSystem:
                 "status": "active",
                 "name": collection_name,
                 "metadata": collection.metadata,
-                "document_count": collection.count(),
+                "chunk_count": collection.count(),
                 "persist_directory": self.db_dir,
             }
         except Exception as e:
@@ -191,7 +257,19 @@ class RAGSystem:
             return {"status": "error", "name": collection_name, "error": str(e)}
 
     def query(self, collection_name: str, user_query: str) -> Tuple[str, str]:
-        """處理用戶查詢"""
+        """
+        Query the collection with a given user query, and return the response.
+
+        The query result is based on the similarity search result of the given user query
+        in the collection. If the collection is not found, it will try to use the default collection.
+
+        Args:
+            collection_name (str): The name of the collection to query.
+            user_query (str): The user query to search in the collection.
+
+        Returns:
+            Tuple[str, str]: A tuple containing the response content and a status message.
+        """
         try:
             if collection_name not in self.vector_stores:
                 APP_LOG.warning(
@@ -234,28 +312,34 @@ class RAGSystem:
         collection_name: str,
         collection_metadata: dict = None,
         documents_dir: str = os.path.join("upload", "default"),
-    ) -> str:
+    ) -> Tuple[str, str]:
         """
-        更新指定集合的向量資料庫
+        Update the vector store of a specific collection by rebuilding it.
+
         Args:
-            collection_name (str): 要更新的集合名稱
-            rebuild (bool): 是否強制重新載入所有文檔
+            collection_name (str): The name of the collection to update.
+            collection_metadata (dict, optional): Metadata for the collection.
+                Defaults to None, in which case existing metadata is used.
+            documents_dir (str, optional): The directory containing documents to
+                load. Defaults to "upload/default".
+
         Returns:
-            str: 更新狀態訊息
+            Tuple[str, str]: A tuple containing a boolean indicating success or
+            failure, and a message detailing the result of the operation.
         """
+
         try:
             if collection_name not in self.vector_stores:
-                return f"Error: Collection '{collection_name}' not found"
+                return f"Error: Collection `{collection_name}` not found"
 
-            # 重建集合
             metadata = (
                 self.get_collection_metadata(collection_name)
                 if collection_metadata is None
                 else collection_metadata
             )
-            # 刪除現有集合
+
             self.delete_collection(collection_name)
-            # 重新創建集合
+
             documents = self.load_documents(documents_dir)
             self.vector_stores[collection_name] = Chroma.from_documents(
                 client=self.chroma_client,
@@ -265,22 +349,38 @@ class RAGSystem:
                 collection_metadata=metadata,
             )
 
-            return f"Collection '{collection_name}' completely rebuilt"
+            return (True, f"Collection `{collection_name}` completely rebuilt")
 
         except Exception as e:
-            return f"Error updating vector store: {str(e)}"
+            return (False, f"Error updating vector store: {str(e)}")
 
     def modify_collection(
         self, collection_name: str, new_name: str, new_metadata: dict
-    ) -> str:
-        """更新指定集合的元數據"""
+    ) -> Tuple[str, str]:
+        """
+        Modify the name and metadata of an existing collection.
+
+        This function updates the name and metadata of a specified collection in both
+        the in-memory vector stores and the database. If the collection is not found
+        in either the in-memory store or the database, an error message is returned.
+
+        Args:
+            collection_name (str): The current name of the collection to modify.
+            new_name (str): The new name for the collection.
+            new_metadata (dict): The new metadata to associate with the collection.
+
+        Returns:
+            str: A message indicating the result of the modification, or an error message
+            if the collection was not found.
+        """
+
         if collection_name not in self.vector_stores:
-            return f"Error: Collection '{collection_name}' not found in memory"
+            return (False, f"Collection `{collection_name}` not found in memory")
 
         collection: Collection = self.chroma_client.get_collection(collection_name)
 
         if not collection:
-            return f"Error: Collection '{collection_name}' not found in database"
+            return (False, f"Collection `{collection_name}` not found in database")
 
         collection.modify(new_name, new_metadata)
         del self.vector_stores[collection_name]
@@ -290,15 +390,28 @@ class RAGSystem:
             collection_name=new_name,
         )
 
-        return f"Collection '{collection_name}' modified to '{new_name}'"
+        return (True, f"Collection `{collection_name}` modified to `{new_name}`")
 
     def get_collections(self) -> List[str]:
-        """獲取所有可用的集合名稱"""
-        # 只返回已載入到記憶體的集合
+        """Get a list of all available(initialized) collection names
+
+        Returns:
+            List[str]: A list of collection names
+        """
         return list(self.vector_stores.keys())
 
     def get_collection_metadata(self, collection_name: str) -> dict:
-        """獲取指定集合的元資料"""
+        """Get the metadata of a specific collection
+
+        Args:
+            collection_name (str): The name of the collection to get metadata for
+
+        Returns:
+            dict: The metadata of the collection as a dictionary
+
+        Raises:
+            ValueError: If the collection is not found
+        """
         collection: Collection = self.chroma_client.get_collection(collection_name)
 
         if not collection:
@@ -307,12 +420,20 @@ class RAGSystem:
         return collection.metadata
 
     def delete_collection(self, collection_name: str) -> Tuple[bool, str]:
-        """刪除指定集合"""
+        """Delete a specific collection
+
+        Args:
+            collection_name (str): The name of the collection to delete
+
+        Returns:
+            Tuple[bool, str]: A tuple containing a boolean indicating whether the collection was deleted successfully, and a status message
+        """
+
         if collection_name in self.vector_stores:
             try:
                 self.chroma_client.delete_collection(collection_name)
                 del self.vector_stores[collection_name]
             except Exception as e:
-                return False, f"Error deleting collection: {str(e)}"
+                return (False, f"Error deleting collection: {str(e)}")
 
-        return True, f"Collection `{collection_name}` has been forgotten"
+        return (True, f"Collection `{collection_name}` has been forgotten")
