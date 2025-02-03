@@ -39,6 +39,8 @@ This project can be quickly deployed after simple configuration without relying 
 
     - Description: Retrieve the list of files including their metadata in a specified collection
     - Path: `collection_name`
+
+      **Note**: If you really don't want to specify a collection name, you can simply use `default`. The same applies to other APIs.
       <br>
 
   - > [GET] /api/v1/file/{collection_name}/{file_id}
